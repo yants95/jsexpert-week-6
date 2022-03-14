@@ -37,7 +37,7 @@ async function routes(request, response) {
     const contentType = CONTENT_TYPE[type]
     if (contentType) {
       response.writeHead(200, {
-        'Content-Type': CONTENT_TYPE[type]
+        'Content-Type': contentType
       })
     }
     return stream.pipe(response)
