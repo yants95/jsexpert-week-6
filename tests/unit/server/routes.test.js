@@ -4,7 +4,7 @@ import { Controller } from '../../../server/controller.js'
 import { handler } from '../../../server/routes.js'
 import TestUtil from '../_utils/test-utils.js'
 
-const { pages, location, constants: CONTENT_TYPE } = config
+const { pages, location, constants: { CONTENT_TYPE } } = config
 
 describe('Routes - test suite for api response', () => {
   beforeEach(() => {
@@ -65,6 +65,35 @@ describe('Routes - test suite for api response', () => {
     expect(mockFileStream.pipe).toHaveBeenNthCalledWith(1, params.response)
   })
 
+  test('GET /index.html - should response with file stream', async () => {
+    const params = TestUtil.defaultHandleParams()
+    const filename = '/index.html'
+    params.request.method = 'GET'
+    params.request.url = filename
+    const expectedType = '.html'
+    const mockFileStream = TestUtil.generateReadableStream(['data'])
+
+    jest.spyOn(
+      Controller.prototype,
+      Controller.prototype.getFileStream.name
+    ).mockResolvedValue({
+      stream: mockFileStream,
+      type: expectedType
+    })
+
+    jest.spyOn(mockFileStream, 'pipe').mockReturnValue()
+
+    await handler(...params.values())
+
+    expect(Controller.prototype.getFileStream).toHaveBeenCalledWith(filename)
+    expect(mockFileStream.pipe).toHaveBeenCalledWith(params.response)
+    expect(params.response.writeHead).toHaveBeenCalledWith(
+      200, {
+        'Content-Type': CONTENT_TYPE[expectedType]
+      }
+    )
+  })
+
   test('GET /file.ext - should response with file stream', async () => {
     const params = TestUtil.defaultHandleParams()
     const filename = '/file.ext'
@@ -85,14 +114,14 @@ describe('Routes - test suite for api response', () => {
 
     await handler(...params.values())
 
-    expect(Controller.prototype.getFileStream).toHaveBeenNthCalledWith(1, filename)
-    expect(mockFileStream.pipe).toHaveBeenNthCalledWith(1, params.response)
+    expect(Controller.prototype.getFileStream).toHaveBeenCalledWith(filename)
+    expect(mockFileStream.pipe).toHaveBeenCalledWith(params.response)
     expect(params.response.writeHead).not.toHaveBeenCalled()
   })
 
-  test('GET /unknown - given an non-existing route it should response with 404', async () => {
+  test('POST /unknown - given an non-existing route it should response with 404', async () => {
     const params = TestUtil.defaultHandleParams()
-    params.request.method = 'GET'
+    params.request.method = 'POST'
     params.request.url = '/unknown'
 
     await handler(...params.values())
